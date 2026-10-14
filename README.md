@@ -189,7 +189,7 @@ The app deploys to Vercel as a standard Next.js project against the `mimus-stagi
 **Steps (repo owner):**
 
 1. **Database.** Apply any new migrations to `mimus-staging`: `npx supabase db push --linked`. Never run `db reset` against it.
-2. **Vercel project.** [vercel.com/new](https://vercel.com/new) → import `syedaliyanshahhh/mimus`. Framework preset: Next.js (detected). Leave Fluid Compute on.
+2. **Vercel project.** [vercel.com/new](https://vercel.com/new) → import `syedaliyanshahhh/Mimus`. Framework preset: Next.js (detected). Leave Fluid Compute on.
 3. **Environment variables** (Production), set _before_ the first build, because `NEXT_PUBLIC_*` values are baked in at build time:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`: from the `mimus-staging` project's API settings.
    - `TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`; keep it, because rows encrypted with it can't be read without it) and `CRON_SECRET` (`openssl rand -hex 32`).
