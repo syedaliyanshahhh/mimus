@@ -23,7 +23,7 @@ describe('loadWorkspaceContext', () => {
 
     await service
       .from('profiles')
-      .insert({ id: userId, email, full_name: 'Ada Lovelace' })
+      .upsert({ id: userId, email, full_name: 'Ada Lovelace' })
       .throwOnError();
 
     const { data: company } = await service

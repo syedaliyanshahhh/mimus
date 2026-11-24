@@ -22,21 +22,11 @@ test('owner toggles a feature switch and it persists through real RLS', async ({
   await expect(page.getByRole('checkbox', { name: /money/i })).toBeChecked();
 });
 
-// Seeds the member's workspace_members row via the service client *before*
-// their first sign-in, rather than going through the real /invite/[token]
-// accept flow: a brand new user who signs in via magic link always gets
-// their own auto-provisioned workspace first (app/auth/callback/route.ts
-// calls createWorkspaceForNewUser before honoring `next`), and only then
-// would acceptInvite() add a second workspace_members row for the invited
-// workspace. getCurrentWorkspaceContext()'s unordered `.limit(1)` then
-// resolves to whichever row comes back first -- in practice the user's own
-// owner row, not the invited member row. That's a real latent bug in the
-// invite-accept flow (multi-workspace membership isn't actually supported
-// anywhere else in the app), out of scope for this task, and reported
-// separately. Pre-seeding the membership sidesteps it: with a membership
-// already in place, create_default_workspace_for_user's own "already a
-// member somewhere" check skips auto-provisioning entirely, so this user
-// ends up with exactly the one row this test cares about.
+// Seeds the member's workspace_members row via the service client before
+// their first sign-in, rather than going through the /invite/[token] flow
+// (tests/e2e/members.spec.ts and onboarding.spec.ts cover that). With a
+// membership already in place, sign-in skips /onboarding and lands them
+// straight in the owner's workspace.
 test('a non-owner member sees a gated message instead of controls', async ({ page, browser }) => {
   const ownerEmail = `e2e-fs-owner2-${Date.now()}@example.com`;
   const memberEmail = `e2e-fs-member-${Date.now()}@example.com`;

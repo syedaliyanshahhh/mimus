@@ -124,7 +124,7 @@ export async function seedConnectedAccount(
 export async function signInViaMagicLink(
   page: Page,
   email: string,
-  { acceptTerms = true }: { acceptTerms?: boolean } = {},
+  { acceptTerms = true, onboard = true }: { acceptTerms?: boolean; onboard?: boolean } = {},
 ): Promise<void> {
   await clearMailbox();
 
@@ -145,6 +145,18 @@ export async function signInViaMagicLink(
   if (acceptTerms && new URL(page.url()).pathname === '/accept-terms') {
     await acceptTermsOnPage(page);
   }
+
+  // A new user with no workspace names their company next
+  // (tests/e2e/onboarding.spec.ts covers it on its own).
+  if (onboard && new URL(page.url()).pathname === '/onboarding') {
+    await completeOnboardingOnPage(page, `Company of ${email}`);
+  }
+}
+
+export async function completeOnboardingOnPage(page: Page, companyName: string): Promise<void> {
+  await page.getByLabel('Company name').fill(companyName);
+  await page.getByRole('button', { name: 'Create company' }).click();
+  await page.waitForURL((url) => url.pathname === '/sky');
 }
 
 export async function acceptTermsOnPage(page: Page): Promise<void> {
@@ -207,7 +219,7 @@ export async function addWorkspaceMember(
   if (createError) throw createError;
   const userId = created.user.id;
 
-  await supabase.from('profiles').insert({ id: userId, email }).throwOnError();
+  // The profile itself comes from the auth.users trigger (migration 0026).
   const { data: membership } = await supabase
     .from('workspace_members')
     .insert({ workspace_id: ownerMembership.workspace_id, user_id: userId, role })

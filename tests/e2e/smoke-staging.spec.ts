@@ -1,5 +1,6 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { expect, test } from '@playwright/test';
+import { acceptTermsOnPage, completeOnboardingOnPage } from './helpers';
 
 // Runs against the real staging Supabase project (not local Mailpit), so
 // magic links are minted directly via the admin API instead of waiting on
@@ -45,9 +46,10 @@ test('staging smoke: sign up, invite, accept, toggle visibility', async ({ page,
   const inviteeEmail =
     process.env.STAGING_TEST_RECIPIENT_EMAIL ?? `staging-invitee-${Date.now()}@example.com`;
 
-  // Sign up -> workspace auto-created.
+  // Sign up -> Terms -> name the company on /onboarding.
   await signInViaGeneratedLink(page, ownerEmail, url);
-  await expect(page.getByText(ownerEmail)).toBeVisible();
+  await acceptTermsOnPage(page);
+  await completeOnboardingOnPage(page, 'Smoke test company');
 
   const { data: ownerUser } = await supabase.auth.admin.listUsers();
   const owner = ownerUser.users.find((u) => u.email === ownerEmail);
@@ -70,10 +72,13 @@ test('staging smoke: sign up, invite, accept, toggle visibility', async ({ page,
     baseUrl: url,
   });
 
-  // Invitee signs up (their own separate workspace gets auto-created too),
-  // then accepts the invite into the owner's workspace.
+  // Invitee signs in (no workspace is created for them on the way), then
+  // accepts the invite into the owner's workspace.
   const inviteePage = page;
   await signInViaGeneratedLink(inviteePage, inviteeEmail, url);
+  if (new URL(inviteePage.url()).pathname === '/accept-terms') {
+    await acceptTermsOnPage(inviteePage);
+  }
   await inviteePage.goto(`/invite/${invite.token}`);
   await expect(inviteePage.getByText(/joined the workspace/i)).toBeVisible();
 
@@ -83,10 +88,6 @@ test('staging smoke: sign up, invite, accept, toggle visibility', async ({ page,
     .from('workspace_members')
     .select('workspace_id')
     .eq('user_id', invitee!.id);
-  // At least 2 (their own auto-created workspace + this invite) -- not
-  // exactly 2, since a reused recipient address may carry memberships from
-  // earlier runs.
-  expect(inviteeMemberships!.length).toBeGreaterThanOrEqual(2);
   expect(inviteeMemberships?.some((m) => m.workspace_id === workspaceId)).toBe(true);
 
   // Toggle connection visibility, as the owner, through the real UI.
