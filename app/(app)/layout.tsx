@@ -1,3 +1,4 @@
+import { getSessionUser } from '@/src/server/auth/getSessionUser';
 import { isWorkspaceReadOnly } from '@/src/server/billing/killSwitch';
 import { hasAcceptedCurrentTerms } from '@/src/server/legal/termsAcceptance';
 import { getCurrentWorkspaceContext } from '@/src/server/workspaces/getCurrentWorkspaceContext';
@@ -23,6 +24,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <TermsGate />
         </Suspense>
         <Suspense fallback={null}>
+          <OnboardingGate />
+        </Suspense>
+        <Suspense fallback={null}>
           <ReadOnlyBannerServer />
         </Suspense>
         {children}
@@ -39,6 +43,17 @@ async function TermsGate() {
   const context = await getCurrentWorkspaceContext();
   if (context && !(await hasAcceptedCurrentTerms(context.supabase, context.userId))) {
     redirect('/accept-terms');
+  }
+  return null;
+}
+
+// A signed-in user with no active workspace (a new sign-up who skipped the
+// form, or someone removed from their only workspace) names a company first.
+// Signed-out visitors fall through to each page's own sign-in redirect.
+async function OnboardingGate() {
+  await connection();
+  if ((await getSessionUser()) && !(await getCurrentWorkspaceContext())) {
+    redirect('/onboarding');
   }
   return null;
 }

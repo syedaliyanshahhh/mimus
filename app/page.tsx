@@ -1,3 +1,4 @@
+import { getSessionUser } from '@/src/server/auth/getSessionUser';
 import { getCurrentWorkspaceContext } from '@/src/server/workspaces/getCurrentWorkspaceContext';
 import {
   ArrowRight,
@@ -218,6 +219,9 @@ async function SignedInRedirect() {
 
   if (context) {
     redirect('/sky');
+  }
+  if (await getSessionUser()) {
+    redirect('/onboarding');
   }
 
   return <GetStarted />;

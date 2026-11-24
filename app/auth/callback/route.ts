@@ -1,7 +1,7 @@
 import { createClient } from '@/src/db/server';
 import { safeNextPath } from '@/src/server/http/safeNextPath';
 import { hasAcceptedCurrentTerms } from '@/src/server/legal/termsAcceptance';
-import { provisionAfterSignIn } from '@/src/server/workspaces/provisionAfterSignIn';
+import { resolvePostSignIn } from '@/src/server/workspaces/resolvePostSignIn';
 import { type EmailOtpType } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
 import { type NextRequest } from 'next/server';
@@ -27,11 +27,14 @@ export async function GET(request: NextRequest) {
       : { data: { user: null }, error: new Error('Missing code or token_hash') };
 
   if (!error && data.user?.email) {
-    await provisionAfterSignIn({ userId: data.user.id, email: data.user.email, next });
+    // An invitee goes on to their invite, a member to where they were
+    // headed, and a new user to /onboarding -- after the clickwrap, if
+    // they haven't accepted the current Terms yet.
+    const destination = await resolvePostSignIn({ userId: data.user.id, next });
     if (!(await hasAcceptedCurrentTerms(supabase, data.user.id))) {
-      redirect(`/accept-terms?next=${encodeURIComponent(next)}`);
+      redirect(`/accept-terms?next=${encodeURIComponent(destination)}`);
     }
-    redirect(next);
+    redirect(destination);
   }
 
   redirect('/sign-in?error=auth');

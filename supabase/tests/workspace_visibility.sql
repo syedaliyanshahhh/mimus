@@ -156,12 +156,13 @@ select is(
   'a plain member cannot update even their own row (0 rows affected, checked via bypass role)'
 );
 
--- 11. profiles: a brand-new profile row per user (profiles gets no trigger
---     here, so insert directly as the bypass role for this fixture).
+-- 11. profiles: one row per user. The auth.users trigger (migration 0026)
+--     normally creates these; the insert is idempotent either way.
 insert into profiles (id, email) values
   ('a0000000-0000-0000-0000-00000000000f', 'owner@example.com'),
   ('a0000000-0000-0000-0000-00000000000b', 'member-b@example.com'),
-  ('a0000000-0000-0000-0000-0000000000e1', 'outsider-owner@example.com');
+  ('a0000000-0000-0000-0000-0000000000e1', 'outsider-owner@example.com')
+on conflict (id) do nothing;
 
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"a0000000-0000-0000-0000-00000000000f","role":"authenticated"}';
