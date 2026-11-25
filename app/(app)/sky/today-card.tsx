@@ -68,11 +68,11 @@ export async function TodayCard({ context, demo }: { context: WorkspaceContext; 
                     href={event.meetingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={`Join ${event.title}`}
                     className="inline-flex shrink-0 items-center gap-1 rounded-pill border border-line-muted px-2.5 py-0.5 text-xs font-medium text-accent-strong hover:border-accent"
                   >
                     <Video className="size-3.5" aria-hidden />
                     Join
-                    <span className="sr-only"> {event.title}</span>
                   </a>
                 )}
               </li>
