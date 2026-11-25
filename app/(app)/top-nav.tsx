@@ -5,6 +5,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { AvatarMenu } from './avatar-menu';
 import { AskBar } from './ask-bar';
 import { ViewToggle } from './view-toggle';
+import type { WorkspaceMembership } from '@/src/server/workspaces/getCurrentWorkspaceContext';
 
 function Logo() {
   return (
@@ -18,7 +19,12 @@ export function TopNav({
   identity,
   pendingApprovals = 0,
 }: {
-  identity: { initials: string; email: string } | null;
+  identity: {
+    initials: string;
+    email: string;
+    activeWorkspaceId: string;
+    memberships: WorkspaceMembership[];
+  } | null;
   pendingApprovals?: number;
 }) {
   return (
@@ -44,7 +50,7 @@ export function TopNav({
         )}
         <ThemeToggle />
         {identity ? (
-          <AvatarMenu initials={identity.initials} email={identity.email} />
+          <AvatarMenu {...identity} />
         ) : (
           <Link
             href="/sign-in"

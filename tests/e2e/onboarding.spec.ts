@@ -53,9 +53,12 @@ test('a new user names their company before reaching the app', async ({ page }) 
     }),
   ]);
 
-  // Done: onboarding now forwards to the app.
-  await page.goto('/onboarding');
+  // Done: the app no longer sends them back, and /onboarding now offers
+  // another company (reached from the account menu's switcher).
+  await page.goto('/sky');
   await expect(page).toHaveURL(/\/sky$/);
+  await page.goto('/onboarding');
+  await expect(page.getByRole('heading', { name: 'Create a new company' })).toBeVisible();
 });
 
 test('an invitee joins the inviting workspace without ever seeing onboarding', async ({ page }) => {
