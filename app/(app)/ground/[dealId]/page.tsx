@@ -1,3 +1,4 @@
+import { showsDemoData } from '@/src/server/workspaces/demoData';
 import { getCurrentWorkspaceContext } from '@/src/server/workspaces/getCurrentWorkspaceContext';
 import { getGroundDetail } from '@/src/mock';
 import { redirect } from 'next/navigation';
@@ -5,6 +6,7 @@ import { connection } from 'next/server';
 import { Suspense } from 'react';
 import { Card } from '@/components/ui/card';
 import { SwoopPill } from '@/components/ui/swoop-pill';
+import { NoDeals } from '../no-deals';
 import { Breadcrumb } from './breadcrumb';
 import { FilesCard } from './files-card';
 import { InsightCard } from './insight-card';
@@ -30,6 +32,10 @@ async function GroundDealContent({
   const context = await getCurrentWorkspaceContext();
   if (!context) {
     redirect(`/sign-in?next=/ground/${dealId}`);
+  }
+
+  if (!(await showsDemoData(context.workspaceId))) {
+    return <NoDeals />;
   }
 
   const detail = getGroundDetail(dealId);

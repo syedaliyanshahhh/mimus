@@ -205,3 +205,10 @@ insert into public.event_signals (workspace_id, type, payload, source_connected_
   ('33333333-3333-4333-8333-000000000001', 'message.received',
    '{"message_id":"77777777-7777-4777-8777-000000000001"}'::jsonb,
    '55555555-5555-4555-8555-000000000001', now() - interval '2 hours', null);
+
+-- ---------------------------------------------------------------------------
+-- Sample data (src/mock) shows only where demo_data is on (MULTI_USER_PLAN.md
+-- A6). The Acme demo workspace keeps it; Globex shows real empty states.
+-- ---------------------------------------------------------------------------
+insert into public.feature_switches (workspace_id, key, enabled) values
+  ('33333333-3333-4333-8333-000000000001', 'demo_data', true);
