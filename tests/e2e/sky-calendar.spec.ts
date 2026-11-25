@@ -32,7 +32,7 @@ test("Sky shows today's real meetings once a calendar is connected", async ({ pa
 
   await page.reload();
   const meetings = page.getByRole('list', { name: "Today's meetings" });
-  await expect(meetings.getByText('Pipeline review')).toBeVisible();
+  await expect(meetings.getByText('Pipeline review', { exact: true })).toBeVisible();
   await expect(meetings.getByText('Room 2 · Dana')).toBeVisible();
   await expect(meetings.getByRole('link', { name: /join pipeline review/i })).toHaveAttribute(
     'href',
