@@ -1,9 +1,11 @@
 import { createServiceClient } from '@/src/db/service';
 import { acceptInvite } from '@/src/server/invites/acceptInvite';
+import { createCompanyWithOwner } from '@/src/server/workspaces/createCompanyWithOwner';
 import {
+  hasActiveMembership,
   inviteTokenFromPath,
-  provisionAfterSignIn,
-} from '@/src/server/workspaces/provisionAfterSignIn';
+  resolvePostSignIn,
+} from '@/src/server/workspaces/resolvePostSignIn';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -27,7 +29,7 @@ describe('inviteTokenFromPath', () => {
   });
 });
 
-describe('provisionAfterSignIn', () => {
+describe('resolvePostSignIn', () => {
   const supabase = createServiceClient();
   const userIds: string[] = [];
   let inviteWorkspaceId: string;
@@ -35,13 +37,13 @@ describe('provisionAfterSignIn', () => {
   beforeAll(async () => {
     const { data: company } = await supabase
       .from('companies')
-      .insert({ name: 'Provision test co' })
+      .insert({ name: 'Post sign-in test co' })
       .select('id')
       .single()
       .throwOnError();
     const { data: workspace } = await supabase
       .from('workspaces')
-      .insert({ company_id: company!.id, name: 'Provision test ws' })
+      .insert({ company_id: company!.id, name: 'Post sign-in test ws' })
       .select('id')
       .single()
       .throwOnError();
@@ -54,7 +56,7 @@ describe('provisionAfterSignIn', () => {
 
   async function newUser() {
     const id = randomUUID();
-    const email = `provision-${id}@example.com`;
+    const email = `post-sign-in-${id}@example.com`;
     const { error } = await supabase.auth.admin.createUser({ id, email, email_confirm: true });
     if (error) throw error;
     userIds.push(id);
@@ -66,7 +68,7 @@ describe('provisionAfterSignIn', () => {
       .from('invites')
       .insert({
         workspace_id: inviteWorkspaceId,
-        email: 'provision-invitee@example.com',
+        email: 'post-sign-in-invitee@example.com',
         role: 'member',
         token: randomUUID(),
         status: 'pending',
@@ -88,56 +90,75 @@ describe('provisionAfterSignIn', () => {
     return data!;
   }
 
-  it('provisions an owner workspace for a normal sign-in', async () => {
+  it('sends a brand new user to onboarding and creates nothing', async () => {
     const user = await newUser();
 
-    await expect(provisionAfterSignIn({ ...user, next: '/' })).resolves.toBe('provisioned');
-
-    const rows = await memberships(user.userId);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].role).toBe('owner');
+    await expect(resolvePostSignIn({ userId: user.userId, next: '/sky' })).resolves.toBe(
+      '/onboarding',
+    );
+    expect(await memberships(user.userId)).toHaveLength(0);
   });
 
-  it('skips provisioning when signing in to accept a pending invite', async () => {
+  it('sends an existing member on to where they were going', async () => {
+    const user = await newUser();
+    await createCompanyWithOwner({
+      userId: user.userId,
+      companyName: 'Existing co',
+      workspaceName: 'General',
+    });
+
+    await expect(resolvePostSignIn({ userId: user.userId, next: '/members' })).resolves.toBe(
+      '/members',
+    );
+  });
+
+  it('sends a user whose only membership was removed to onboarding', async () => {
+    const user = await newUser();
+    await createCompanyWithOwner({
+      userId: user.userId,
+      companyName: 'Left co',
+      workspaceName: 'General',
+    });
+    await supabase
+      .from('workspace_members')
+      .update({ status: 'removed' })
+      .eq('user_id', user.userId)
+      .throwOnError();
+
+    expect(await hasActiveMembership(user.userId)).toBe(false);
+    await expect(resolvePostSignIn({ userId: user.userId, next: '/sky' })).resolves.toBe(
+      '/onboarding',
+    );
+  });
+
+  it('sends a user signing in to accept a pending invite on to the invite', async () => {
     const user = await newUser();
     const token = await insertInvite();
 
-    await expect(provisionAfterSignIn({ ...user, next: `/invite/${token}` })).resolves.toBe(
-      'skipped_for_invite',
-    );
+    await expect(
+      resolvePostSignIn({ userId: user.userId, next: `/invite/${token}` }),
+    ).resolves.toBe(`/invite/${token}`);
     expect(await memberships(user.userId)).toHaveLength(0);
-
-    // The profile is identity, not a workspace: peers in the invited
-    // workspace read the invitee's email from it.
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('id', user.userId)
-      .maybeSingle()
-      .throwOnError();
-    expect(profile).toEqual({ email: user.email });
   });
 
   it.each([
     ['expired', { expires_at: new Date(Date.now() - 60_000).toISOString() }],
     ['already accepted', { status: 'accepted' }],
-  ])('still provisions when the invite is %s', async (_label, overrides) => {
+  ])('sends a new user to onboarding when the invite is %s', async (_label, overrides) => {
     const user = await newUser();
     const token = await insertInvite(overrides);
 
-    await expect(provisionAfterSignIn({ ...user, next: `/invite/${token}` })).resolves.toBe(
-      'provisioned',
-    );
-    expect(await memberships(user.userId)).toHaveLength(1);
+    await expect(
+      resolvePostSignIn({ userId: user.userId, next: `/invite/${token}` }),
+    ).resolves.toBe('/onboarding');
   });
 
-  it('still provisions when the invite token is unknown', async () => {
+  it('sends a new user to onboarding when the invite token is unknown', async () => {
     const user = await newUser();
 
-    await expect(provisionAfterSignIn({ ...user, next: `/invite/${randomUUID()}` })).resolves.toBe(
-      'provisioned',
-    );
-    expect(await memberships(user.userId)).toHaveLength(1);
+    await expect(
+      resolvePostSignIn({ userId: user.userId, next: `/invite/${randomUUID()}` }),
+    ).resolves.toBe('/onboarding');
   });
 
   // Regression: a new user signing in through an invite link used to get an
@@ -146,7 +167,7 @@ describe('provisionAfterSignIn', () => {
     const user = await newUser();
     const token = await insertInvite({ role: 'manager', email: user.email });
 
-    await provisionAfterSignIn({ ...user, next: `/invite/${token}` });
+    await resolvePostSignIn({ userId: user.userId, next: `/invite/${token}` });
     await acceptInvite({ token, userId: user.userId });
 
     expect(await memberships(user.userId)).toEqual([

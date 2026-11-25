@@ -1,6 +1,6 @@
 import { createClient } from '@/src/db/server';
 import { acceptInvite } from '@/src/server/invites/acceptInvite';
-import { createWorkspaceForNewUser } from '@/src/server/workspaces/createWorkspace';
+import { hasActiveMembership } from '@/src/server/workspaces/resolvePostSignIn';
 import Link from 'next/link';
 import { connection } from 'next/server';
 import { MimusLogo } from '@/components/brand/logo';
@@ -46,17 +46,19 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   try {
     await acceptInvite({ token, userId });
   } catch (error) {
-    // Sign-in skips auto-provisioning for a pending invite, so if the
-    // invite stopped being acceptable since then (revoked, expired) give
-    // the user their own workspace now. A no-op if they already have one.
-    if (email) await createWorkspaceForNewUser(userId, email);
+    // If the invite stopped being acceptable (revoked, expired, wrong
+    // address), someone with no workspace yet can set up their own.
+    const isMember = await hasActiveMembership(userId);
     return (
       <Card>
         <p className="mb-4 text-sm text-danger">
           {error instanceof Error ? error.message : 'Could not accept invite.'}
         </p>
-        <Link href="/" className="font-medium text-accent-strong hover:text-accent">
-          Go to Mimus
+        <Link
+          href={isMember ? '/' : '/onboarding'}
+          className="font-medium text-accent-strong hover:text-accent"
+        >
+          {isMember ? 'Go to Mimus' : 'Set up your own company'}
         </Link>
       </Card>
     );

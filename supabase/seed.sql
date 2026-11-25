@@ -6,8 +6,8 @@
 --
 -- Seeded users can sign in with a magic link (it lands in Mailpit at
 -- http://127.0.0.1:54324) or with the shared dev password below. Since each
--- already has a membership, provisionAfterSignIn won't create a second
--- workspace for them.
+-- already has a membership, they skip /onboarding and land in their
+-- workspace.
 --
 --   Acme Demo Co (workspace 1)
 --     olivia.owner@example.com    owner
@@ -55,7 +55,8 @@ where u.id::text like '11111111-1111-4111-8111-%';
 insert into public.profiles (id, email, full_name)
 select id, email, raw_user_meta_data ->> 'full_name'
 from auth.users
-where id::text like '11111111-1111-4111-8111-%';
+where id::text like '11111111-1111-4111-8111-%'
+on conflict (id) do update set full_name = excluded.full_name;
 
 -- ---------------------------------------------------------------------------
 -- Companies, workspaces, memberships
