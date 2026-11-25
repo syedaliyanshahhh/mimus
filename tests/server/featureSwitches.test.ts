@@ -30,6 +30,11 @@ describe('feature switches', () => {
     }
   });
 
+  it('keeps the sample data (demo_data) off for a new workspace', async () => {
+    const workspaceId = await makeWorkspace();
+    await expect(isFeatureEnabled(workspaceId, 'demo_data')).resolves.toBe(false);
+  });
+
   it("a plan's feature_defaults can turn a switch on", async () => {
     const workspaceId = await makeWorkspace();
 

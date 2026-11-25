@@ -1,13 +1,15 @@
 import { createServiceClient } from '@/src/db/service';
 
 // Money/Pipeline/Projects/Canopy don't exist yet, so they stay off even for
-// a workspace with no plan assigned. Anything else defaults on until a plan
-// says otherwise.
+// a workspace with no plan assigned, and so does the sample data, which
+// only demo workspaces show. Anything else defaults on until a plan says
+// otherwise.
 const HARDCODED_DEFAULTS: Record<string, boolean> = {
   money: false,
   pipeline: false,
   projects: false,
   canopy: false,
+  demo_data: false,
 };
 
 export async function isFeatureEnabled(workspaceId: string, key: string): Promise<boolean> {

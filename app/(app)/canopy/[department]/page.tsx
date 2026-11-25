@@ -1,8 +1,10 @@
+import { showsDemoData } from '@/src/server/workspaces/demoData';
 import { getCurrentWorkspaceContext } from '@/src/server/workspaces/getCurrentWorkspaceContext';
 import { getDealsForDepartment, getDepartmentBySlug, type DepartmentSlug } from '@/src/mock';
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { Suspense } from 'react';
+import { EmptyStateCard } from '../../empty-state-card';
 import { DepartmentPills } from './department-pills';
 import { InsightRail } from './insight-rail';
 import { KanbanBoard } from './kanban-board';
@@ -36,6 +38,18 @@ async function CanopyDepartmentContent({
   const context = await getCurrentWorkspaceContext();
   if (!context) {
     redirect(`/sign-in?next=/canopy/${slug}`);
+  }
+
+  if (!(await showsDemoData(context.workspaceId))) {
+    return (
+      <div className="flex flex-col gap-8">
+        <DepartmentPills activeSlug={department.slug} />
+        <EmptyStateCard
+          title="No pipeline data yet"
+          body={`${department.name} deals, metrics and insights appear here once their data source is connected.`}
+        />
+      </div>
+    );
   }
 
   const deals = getDealsForDepartment(slug as DepartmentSlug);

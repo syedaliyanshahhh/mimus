@@ -6,10 +6,11 @@ import { Suspense } from 'react';
 import { Card } from '@/components/ui/card';
 import { ToggleSwitch } from './toggle-switch';
 
-const HARDCODED_KEYS = ['money', 'pipeline', 'projects', 'canopy', 'scheduling'];
+const HARDCODED_KEYS = ['money', 'pipeline', 'projects', 'canopy', 'scheduling', 'demo_data'];
 
 function labelFor(key: string): string {
-  return key.charAt(0).toUpperCase() + key.slice(1);
+  const words = key.replaceAll('_', ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export default function FeatureSwitchesPage() {
