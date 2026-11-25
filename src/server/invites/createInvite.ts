@@ -20,30 +20,26 @@ export async function createInvite(params: {
   }
   await assertWorkspaceWritable(params.workspaceId);
 
+  // create_invite() (migration 0028) checks the seat limit and inserts the
+  // invite under one lock on the workspace.
   const supabase = createServiceClient();
-  const { data: inviter } = await supabase
-    .from('workspace_members')
-    .select('id')
-    .eq('workspace_id', params.workspaceId)
-    .eq('user_id', params.invitedByUserId)
-    .single();
-
   const token = randomUUID();
-  const { data: invite, error } = await supabase
-    .from('invites')
-    .insert({
-      workspace_id: params.workspaceId,
-      email: params.email,
-      role: params.role,
-      invited_by: inviter?.id ?? null,
-      token,
-      status: 'pending',
-      expires_at: new Date(Date.now() + INVITE_TTL_MS).toISOString(),
-    })
-    .select()
-    .single();
+  const { data: inviteId, error } = await supabase.rpc('create_invite', {
+    p_workspace_id: params.workspaceId,
+    p_invited_by_user_id: params.invitedByUserId,
+    p_email: params.email,
+    p_role: params.role,
+    p_token: token,
+    p_expires_at: new Date(Date.now() + INVITE_TTL_MS).toISOString(),
+  });
+  if (error) throw new Error(error.message);
 
-  if (error) throw error;
+  const { data: invite } = await supabase
+    .from('invites')
+    .select()
+    .eq('id', inviteId as string)
+    .single()
+    .throwOnError();
 
   await sendInviteEmail({
     to: params.email,

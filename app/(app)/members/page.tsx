@@ -1,3 +1,4 @@
+import { getSeatUsage } from '@/src/server/invites/seatUsage';
 import { getCurrentWorkspaceContext } from '@/src/server/workspaces/getCurrentWorkspaceContext';
 import Link from 'next/link';
 import { connection } from 'next/server';
@@ -36,11 +37,14 @@ async function MembersList() {
 
   const { supabase, workspaceId, userId, role: viewerRole } = context;
 
-  const { data: members } = await supabase
-    .from('workspace_members')
-    .select('id, user_id, role, manager_id')
-    .eq('workspace_id', workspaceId)
-    .eq('status', 'active');
+  const [{ data: members }, seats] = await Promise.all([
+    supabase
+      .from('workspace_members')
+      .select('id, user_id, role, manager_id')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active'),
+    getSeatUsage(supabase, workspaceId),
+  ]);
 
   const userIds = (members ?? []).map((member) => member.user_id);
   const { data: profiles } =
@@ -60,7 +64,16 @@ async function MembersList() {
   return (
     <div className="flex flex-col gap-6">
       <Card>
-        <h1 className="mb-4 text-2xl font-semibold text-ink">Members</h1>
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h1 className="text-2xl font-semibold text-ink">Members</h1>
+          {seats && (
+            <p className="text-sm text-ink-muted">
+              {seats.limit === null
+                ? `${seats.used} ${seats.used === 1 ? 'seat' : 'seats'} in use`
+                : `${seats.used} / ${seats.limit} seats`}
+            </p>
+          )}
+        </div>
         <ul className="flex flex-col divide-y divide-line-muted">
           {(members ?? []).map((member) => {
             const canManage =

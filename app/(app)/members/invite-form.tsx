@@ -21,7 +21,11 @@ export function InviteForm({ viewerRole }: { viewerRole: 'owner' | 'manager' }) 
           setPending(true);
           setError(null);
           try {
-            await inviteMember(email, role);
+            const result = await inviteMember(email, role);
+            if (result.error) {
+              setError(result.error);
+              return;
+            }
             setEmail('');
             setRole('member');
           } catch (err) {

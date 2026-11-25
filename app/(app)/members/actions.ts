@@ -8,22 +8,32 @@ import type { WorkspaceRole } from '@/src/server/permissions/roles';
 import { getCurrentWorkspaceContext } from '@/src/server/workspaces/getCurrentWorkspaceContext';
 import { revalidatePath } from 'next/cache';
 
-export async function inviteMember(email: string, role: WorkspaceRole) {
+// Returns the reason an invite was refused (seat limit, role, read-only)
+// instead of throwing it: production builds replace a thrown server-action
+// error's message with a generic one.
+export async function inviteMember(
+  email: string,
+  role: WorkspaceRole,
+): Promise<{ error: string | null }> {
   const context = await getCurrentWorkspaceContext();
   if (!context) {
-    throw new Error('Not signed in');
+    return { error: 'Not signed in' };
   }
 
-  const baseUrl = await getBaseUrl();
-  await createInvite({
-    workspaceId: context.workspaceId,
-    workspaceName: context.workspaceName,
-    invitedByUserId: context.userId,
-    email,
-    role,
-    baseUrl,
-  });
+  try {
+    await createInvite({
+      workspaceId: context.workspaceId,
+      workspaceName: context.workspaceName,
+      invitedByUserId: context.userId,
+      email,
+      role,
+      baseUrl: await getBaseUrl(),
+    });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Could not send invite.' };
+  }
   revalidatePath('/members');
+  return { error: null };
 }
 
 // Enforcement is migration 0011's RLS UPDATE policy on workspace_members,

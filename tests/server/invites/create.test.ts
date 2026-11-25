@@ -156,4 +156,39 @@ describe('createInvite', () => {
 
     expect(sendInviteEmail).not.toHaveBeenCalled();
   });
+
+  it('rejects an invite past the plan seat limit, stores nothing and sends no email', async () => {
+    const { data: plan } = await supabase
+      .from('plans')
+      .insert({ name: `One seat ${randomUUID()}`, seat_limit: 2 })
+      .select('id')
+      .single()
+      .throwOnError();
+    // Owner + manager already fill both seats (earlier tests' pending
+    // invites add more, so only the message's start is fixed).
+    await supabase
+      .from('workspace_subscriptions')
+      .upsert({ workspace_id: workspaceId, plan_id: plan!.id, status: 'active' })
+      .throwOnError();
+    const email = `over-limit-${randomUUID()}@example.com`;
+    try {
+      await expect(
+        createInvite({
+          workspaceId,
+          workspaceName: 'Invite test ws',
+          invitedByUserId: ownerId,
+          email,
+          role: 'member',
+          baseUrl: 'http://localhost:3000',
+        }),
+      ).rejects.toThrow(/^Seat limit reached: \d+ of 2 seats are in use$/);
+
+      const { data: invites } = await supabase.from('invites').select('id').eq('email', email);
+      expect(invites).toHaveLength(0);
+      expect(sendInviteEmail).not.toHaveBeenCalled();
+    } finally {
+      await supabase.from('workspace_subscriptions').delete().eq('workspace_id', workspaceId);
+      await supabase.from('plans').delete().eq('id', plan!.id);
+    }
+  });
 });
