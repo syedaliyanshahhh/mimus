@@ -75,7 +75,12 @@ async function TopNavServer() {
 
   return (
     <TopNav
-      identity={{ initials: getInitials(context.fullName, context.email), email: context.email }}
+      identity={{
+        initials: getInitials(context.fullName, context.email),
+        email: context.email,
+        activeWorkspaceId: context.workspaceId,
+        memberships: context.memberships,
+      }}
       pendingApprovals={count ?? 0}
     />
   );
