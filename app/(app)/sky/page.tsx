@@ -8,8 +8,8 @@ import { Suspense } from 'react';
 import { EmptyStateCard } from '../empty-state-card';
 import { DepartmentRow } from './department-row';
 import { KpiTile } from './kpi-tile';
-import { MondayCard } from './monday-card';
 import { NeedsYouCard } from './needs-you-card';
+import { TodayCard, TodayCardSkeleton } from './today-card';
 
 export default function SkyPage() {
   return (
@@ -34,7 +34,14 @@ async function SkyContent() {
     day: 'numeric',
   }).format(new Date());
 
-  if (!(await showsDemoData(context.workspaceId))) {
+  const demo = await showsDemoData(context.workspaceId);
+  const todayCard = (
+    <Suspense fallback={<TodayCardSkeleton />}>
+      <TodayCard context={context} demo={demo} />
+    </Suspense>
+  );
+
+  if (!demo) {
     return (
       <div className="flex flex-col gap-8">
         <div>
@@ -46,10 +53,7 @@ async function SkyContent() {
             title="Connect your email to see what needs you"
             body="Mimus reads the mail and Slack you connect and pulls out the replies, approvals and follow-ups waiting on you."
           />
-          <EmptyStateCard
-            title="Today"
-            body="Connect your calendar to see today's meetings here."
-          />
+          {todayCard}
         </div>
       </div>
     );
@@ -75,7 +79,7 @@ async function SkyContent() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
         <NeedsYouCard />
-        <MondayCard />
+        {todayCard}
       </div>
 
       <DepartmentRow />
