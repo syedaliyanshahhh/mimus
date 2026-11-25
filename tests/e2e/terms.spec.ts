@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/src/db/service';
 import { expect, test } from '@playwright/test';
-import { acceptTermsOnPage, signInViaMagicLink } from './helpers';
+import { acceptTermsOnPage, completeOnboardingOnPage, signInViaMagicLink } from './helpers';
 
 async function acceptancesFor(email: string) {
   const supabase = createServiceClient();
@@ -33,11 +33,13 @@ test('a new user accepts the Terms and confirms their age before using Mimus', a
   expect((await acceptancesFor(email)).rows).toHaveLength(0);
 
   await acceptTermsOnPage(page);
-  await expect(page).toHaveURL(/\/sky$/);
+  // A brand new user names their company next (onboarding.spec.ts).
+  await expect(page).toHaveURL(/\/onboarding$/);
   expect((await acceptancesFor(email)).rows).toEqual([
     { terms_version: expect.any(String), age_confirmed: true },
   ]);
 
+  await completeOnboardingOnPage(page, 'Terms test company');
   await page.goto('/members');
   await expect(page).toHaveURL(/\/members$/);
 });

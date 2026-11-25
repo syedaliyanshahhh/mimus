@@ -14,6 +14,9 @@ test('owner toggles a feature switch and it persists through real RLS', async ({
 
   await moneyToggle.click();
   await expect(moneyToggle).toBeChecked();
+  // The toggle is disabled while its save is in flight; reloading before it
+  // finishes would race the write.
+  await expect(moneyToggle).toBeEnabled();
 
   // Reload to prove the toggle was written under the owner's own session
   // through the real `manage_feature_switches` RLS policy, not just held

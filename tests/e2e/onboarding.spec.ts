@@ -40,7 +40,8 @@ test('a new user names their company before reaching the app', async ({ page }) 
   // A blank name is rejected with a message, not a crash.
   await page.getByLabel('Company name').fill('   ');
   await page.getByRole('button', { name: 'Create company' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Company name is required');
+  // Scoped to the form: Next's route announcer is also role=alert.
+  await expect(page.locator('form').getByRole('alert')).toHaveText('Company name is required');
 
   await page.getByLabel('Workspace name').fill('Leadership');
   await completeOnboardingOnPage(page, 'Northwind Traders');
