@@ -147,7 +147,7 @@ describe('provisionAfterSignIn', () => {
     const token = await insertInvite({ role: 'manager', email: user.email });
 
     await provisionAfterSignIn({ ...user, next: `/invite/${token}` });
-    await acceptInvite({ token, userId: user.userId, email: user.email });
+    await acceptInvite({ token, userId: user.userId });
 
     expect(await memberships(user.userId)).toEqual([
       { workspace_id: inviteWorkspaceId, role: 'manager' },

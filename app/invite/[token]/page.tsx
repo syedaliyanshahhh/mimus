@@ -44,7 +44,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   }
 
   try {
-    await acceptInvite({ token, userId, email });
+    await acceptInvite({ token, userId });
   } catch (error) {
     // Sign-in skips auto-provisioning for a pending invite, so if the
     // invite stopped being acceptable since then (revoked, expired) give
