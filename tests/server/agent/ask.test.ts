@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/src/db/service';
 import { askMimus, type AskEvent } from '@/src/server/agent/ask';
+import { createFallbackProvider } from '@/src/server/agent/providers/fallback';
 import type {
   AiCompletion,
   AiCompletionRequest,
@@ -188,6 +189,35 @@ describe('askMimus: Who -> Router -> Tools -> Answer', () => {
     expect(result.sources).toEqual([]);
     expect(JSON.stringify(calls.at(-1)!.messages)).not.toContain('40M');
     expect(JSON.stringify(result)).not.toContain('40M');
+  });
+
+  it('answers through Claude when OpenAI is down, and logs and prices the model that answered', async () => {
+    const outage = Object.assign(new Error('OpenAI is down'), { status: 503 });
+    const openai: AiProvider = { complete: vi.fn().mockRejectedValue(outage) };
+    const scripted = scriptedProvider({ module: 'lookup', tier: 'fast', confidence: 0.9 }, [
+      answer('Sign by Friday.'),
+    ]);
+    const claude: AiProvider = {
+      complete: async (request) => ({
+        ...(await scripted.provider.complete(request)),
+        modelId: 'claude-haiku-5-5',
+      }),
+    };
+
+    const result = await askMimus({
+      ctx: alice,
+      question: 'when is the lease due?',
+      provider: createFallbackProvider([
+        { name: 'openai', provider: openai },
+        { name: 'anthropic', provider: claude },
+      ]),
+    });
+
+    expect(result).toMatchObject({ status: 'ok', answer: 'Sign by Friday.' });
+    const row = await logRow(result.logId);
+    expect(row.model_id).toBe('claude-haiku-5-5');
+    // classify + answer, 1000 in / 100 out each, at Haiku 5.5's $0.10 / $0.50.
+    expect(Number(row.cost_usd)).toBeCloseTo((2000 * 0.1 + 200 * 0.5) / 1_000_000);
   });
 
   it("refuses a tool the routed module doesn't offer", async () => {
