@@ -125,6 +125,10 @@ insert into ai_thread_messages (thread_id, workspace_id, user_id, role, content)
   ('b9000000-0000-0000-0000-000000000001', 'b3000000-0000-0000-0000-000000000001',
    'b1000000-0000-0000-0000-000000000001', 'user', 'B secret question');
 
+insert into ai_day_summaries (workspace_id, user_id, day, summary) values
+  ('b3000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+   current_date, 'B secret day');
+
 -- ---------------------------------------------------------------------------
 -- Helpers. Both run as the caller (security invoker), so under
 -- `set local role authenticated` they see exactly what that user's RLS
