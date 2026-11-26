@@ -2,6 +2,7 @@ import { logAgentRequest } from '@/src/server/agent/logAgentRequest';
 import { AGENT_MODULES, type AgentModule } from '@/src/server/agent/modules';
 import { createAiProvider } from '@/src/server/agent/providers';
 import type {
+  AiAssistantBlock,
   AiCompletion,
   AiMessage,
   AiProvider,
@@ -21,6 +22,10 @@ export interface AskResult {
   module: string;
   tier: ModelTier;
   logId: string;
+  // The answer as the provider returned it (opaque reasoning included), for
+  // replaying as history on a thread's next turn. Server-only: it never goes
+  // to the client.
+  blocks: AiAssistantBlock[];
 }
 
 // Progress for a streaming caller: `status` starts a new step (any partial
@@ -65,11 +70,12 @@ async function attemptAnswer(
   ctx: ToolContext,
   skill: AgentModule,
   question: string,
+  history: AiMessage[],
   tier: ModelTier,
   now: Date,
   onEvent?: OnEvent,
 ): Promise<Attempt> {
-  const messages: AiMessage[] = [{ role: 'user', content: question }];
+  const messages: AiMessage[] = [...history, { role: 'user', content: question }];
   const completions: AiCompletion[] = [];
   const sources: Source[] = [];
 
@@ -122,11 +128,23 @@ function uniqueSources(sources: Source[]): Source[] {
   });
 }
 
+// What the router classifies: a follow-up ("and Tuesday?") means little
+// without the question before it.
+function routingText(question: string, history: AiMessage[]): string {
+  const previous = history.findLast((message) => message.role === 'user');
+  if (!previous || typeof previous.content !== 'string') return question;
+  return `Earlier question: ${previous.content}\nFollow-up: ${question}`;
+}
+
+const textBlocks = (text: string): AiAssistantBlock[] => [{ type: 'text', text }];
+
 // Who -> Router -> Tools -> Answer. "Who" is ctx: the asker's own
-// RLS-scoped session, which is all the tools ever query with.
+// RLS-scoped session, which is all the tools ever query with. `history` is
+// a thread's earlier turns: questions, and answers as their blocks.
 export async function askMimus({
   ctx,
   question,
+  history = [],
   module: requestedModule,
   provider = createAiProvider(),
   now = new Date(),
@@ -134,6 +152,7 @@ export async function askMimus({
 }: {
   ctx: ToolContext;
   question: string;
+  history?: AiMessage[];
   module?: string;
   provider?: AiProvider;
   now?: Date;
@@ -141,7 +160,7 @@ export async function askMimus({
 }): Promise<AskResult> {
   const route = await routeRequest({
     provider,
-    question,
+    question: routingText(question, history),
     candidates: AGENT_MODULES,
     module: requestedModule,
   });
@@ -185,6 +204,7 @@ export async function askMimus({
       {
         status: 'spend_cap_reached',
         answer: 'This workspace has reached its AI spend limit for the month.',
+        blocks: textBlocks('This workspace has reached its AI spend limit for the month.'),
         sources: [],
         module: skill.name,
         tier: route.tier,
@@ -201,7 +221,16 @@ export async function askMimus({
       maxTier: cappedTier === route.tier ? 'deep' : cappedTier,
       attempt: async (tier) => {
         if (attempts++ > 0) onEvent?.({ type: 'status', text: 'Taking a closer look…' });
-        const attempt = await attemptAnswer(provider, ctx, skill, question, tier, now, onEvent);
+        const attempt = await attemptAnswer(
+          provider,
+          ctx,
+          skill,
+          question,
+          history,
+          tier,
+          now,
+          onEvent,
+        );
         completions.push(...attempt.completions);
         return attempt;
       },
@@ -209,10 +238,14 @@ export async function askMimus({
     });
     const { result } = outcome;
     const ok = result.finished && result.answer.length > 0;
+    const answer = ok ? result.answer : "Sorry, I couldn't put together an answer to that.";
     return finish(
       {
         status: ok ? 'ok' : 'no_answer',
-        answer: ok ? result.answer : "Sorry, I couldn't put together an answer to that.",
+        answer,
+        // Only a finished answer's own blocks replay cleanly; a cut-off one
+        // may end mid tool call.
+        blocks: ok ? result.completions.at(-1)!.content : textBlocks(answer),
         sources: uniqueSources(result.sources),
         module: skill.name,
         tier: outcome.tier,
@@ -221,7 +254,14 @@ export async function askMimus({
     );
   } catch (err) {
     await finish(
-      { status: 'error', answer: '', sources: [], module: skill.name, tier: cappedTier },
+      {
+        status: 'error',
+        answer: '',
+        blocks: [],
+        sources: [],
+        module: skill.name,
+        tier: cappedTier,
+      },
       completions.at(-1)?.modelId ?? '',
     ).catch(() => undefined);
     throw err;

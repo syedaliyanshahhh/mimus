@@ -18,6 +18,7 @@ const result: AskResult = {
   module: 'lookup',
   tier: 'fast',
   logId: 'log-1',
+  blocks: [],
 };
 
 describe('askEventStream', () => {

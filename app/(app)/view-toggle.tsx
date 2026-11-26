@@ -8,6 +8,7 @@ const SEGMENTS = [
   { href: '/sky', label: 'Sky' },
   { href: '/canopy', label: 'Canopy' },
   { href: '/ground', label: 'Ground' },
+  { href: '/ask', label: 'Ask' },
 ];
 
 export function ViewToggle() {
