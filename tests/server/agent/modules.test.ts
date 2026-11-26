@@ -29,4 +29,12 @@ describe('agent modules', () => {
       'createSchedulingProposal',
     );
   });
+
+  it('lookup and briefing can search by meaning', () => {
+    for (const name of ['lookup', 'briefing']) {
+      const skill = AGENT_MODULES.find((candidate) => candidate.name === name)!;
+      expect(skill.tools).toContain('semanticSearch');
+      expect(skill.instructions).toContain('semanticSearch');
+    }
+  });
 });
