@@ -77,6 +77,10 @@ insert into events (id, workspace_id, connected_account_id, provider_event_id, t
 insert into event_attendees (event_id, person_id) values
   ('b8000000-0000-0000-0000-000000000001', 'b6000000-0000-0000-0000-000000000001');
 
+insert into content_chunks (workspace_id, connected_account_id, message_id, chunk_index, content, embedding) values
+  ('b3000000-0000-0000-0000-000000000001', 'b5000000-0000-0000-0000-000000000003', 'b7000000-0000-0000-0000-000000000001',
+   0, 'B secret', array_fill(0.1::real, array[1536])::extensions.vector);
+
 insert into event_signals (workspace_id, type, source_connected_account_id) values
   ('b3000000-0000-0000-0000-000000000001', 'message.received', 'b5000000-0000-0000-0000-000000000003');
 
