@@ -228,3 +228,77 @@ export async function addWorkspaceMember(
     .throwOnError();
   return { userId, membershipId: membership!.id as string };
 }
+
+// Stands in for POST /api/agent/ask (no AI key in CI) and writes what that
+// route persists -- the thread and both messages of each turn -- so /ask
+// pages render it back. The route's own persistence is covered in vitest
+// (tests/server/agent/threads.test.ts).
+export async function workspaceOf(email: string): Promise<{ userId: string; workspaceId: string }> {
+  const service = createServiceClient();
+  const { data: profile } = await service
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .single()
+    .throwOnError();
+  const { data: membership } = await service
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('user_id', profile!.id)
+    .single()
+    .throwOnError();
+  return { userId: profile!.id as string, workspaceId: membership!.workspace_id as string };
+}
+
+export function stubAsk(page: Page, owner: { userId: string; workspaceId: string }) {
+  const service = createServiceClient();
+  const requests: { question: string; threadId?: string }[] = [];
+  return {
+    requests,
+    route: page.route('**/api/agent/ask', async (route) => {
+      const body = route.request().postDataJSON() as { question: string; threadId?: string };
+      requests.push(body);
+      let threadId = body.threadId;
+      if (!threadId) {
+        const { data } = await service
+          .from('ai_threads')
+          .insert({ workspace_id: owner.workspaceId, user_id: owner.userId, title: body.question })
+          .select('id')
+          .single()
+          .throwOnError();
+        threadId = data!.id as string;
+      }
+      const answer = `Answer to: ${body.question}`;
+      const row = { thread_id: threadId, workspace_id: owner.workspaceId, user_id: owner.userId };
+      await service
+        .from('ai_thread_messages')
+        .insert({ ...row, role: 'user', content: body.question })
+        .throwOnError();
+      await service
+        .from('ai_thread_messages')
+        .insert({ ...row, role: 'assistant', content: answer })
+        .throwOnError();
+      const events = [
+        { type: 'thread', threadId },
+        { type: 'status', text: 'Searching email…' },
+        { type: 'delta', text: 'Answer to: ' },
+        {
+          type: 'done',
+          result: {
+            status: 'ok',
+            answer,
+            sources: [],
+            module: 'lookup',
+            tier: 'fast',
+            logId: 'x',
+            threadId,
+          },
+        },
+      ];
+      await route.fulfill({
+        contentType: 'application/x-ndjson',
+        body: events.map((event) => JSON.stringify(event)).join('\n') + '\n',
+      });
+    }),
+  };
+}
