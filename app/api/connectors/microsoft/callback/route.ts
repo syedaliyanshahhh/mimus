@@ -1,5 +1,6 @@
 import { getConnector } from '@/src/server/connectors/bootstrap';
 import { MICROSOFT_OAUTH_NONCE_COOKIE } from '@/src/server/connectors/cookies';
+import { embedAfterImport } from '@/src/server/rag/embedPending';
 import { getCurrentWorkspaceContext } from '@/src/server/workspaces/getCurrentWorkspaceContext';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -70,6 +71,7 @@ export async function GET(request: NextRequest) {
     after(() =>
       getConnector('microsoft')
         .backfill(row.id)
+        .then(() => embedAfterImport(row.id))
         .catch((err) => console.error(`Microsoft backfill failed for account ${row.id}`, err)),
     );
   }

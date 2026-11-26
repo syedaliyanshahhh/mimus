@@ -1,5 +1,6 @@
 import { getConnector } from '@/src/server/connectors/bootstrap';
 import { CALENDLY_OAUTH_NONCE_COOKIE } from '@/src/server/connectors/cookies';
+import { embedAfterImport } from '@/src/server/rag/embedPending';
 import { getCurrentWorkspaceContext } from '@/src/server/workspaces/getCurrentWorkspaceContext';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
     after(() =>
       getConnector('calendly')
         .backfill(row.id)
+        .then(() => embedAfterImport(row.id))
         .catch((err) => console.error(`Calendly backfill failed for account ${row.id}`, err)),
     );
     const registerWebhook = getConnector('calendly').registerWebhook;

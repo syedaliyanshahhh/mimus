@@ -103,7 +103,7 @@ export async function upsertMessage(
 
   const { data: existing } = await supabase
     .from('messages')
-    .select('id')
+    .select('id, subject, snippet, body_text, sent_at, from_person_id')
     .eq('connected_account_id', connectedAccountId)
     .eq('provider_message_id', message.providerMessageId)
     .maybeSingle();
@@ -130,6 +130,13 @@ export async function upsertMessage(
       .eq('id', existing.id)
       .throwOnError();
     messageId = existing.id as string;
+    const changed =
+      existing.subject !== (message.subject ?? null) ||
+      existing.snippet !== (message.snippet ?? null) ||
+      existing.body_text !== (message.bodyText ?? null) ||
+      !sameInstant(existing.sent_at, message.sentAt) ||
+      existing.from_person_id !== fromPersonId;
+    if (changed) await dropChunks('message_id', messageId);
   } else {
     const { data } = await supabase
       .from('messages')
@@ -177,7 +184,7 @@ export async function upsertEvent(
 
   const { data: existing } = await supabase
     .from('events')
-    .select('id')
+    .select('id, title, description, location, starts_at, ends_at, all_day')
     .eq('connected_account_id', connectedAccountId)
     .eq('provider_event_id', event.providerEventId)
     .maybeSingle();
@@ -206,6 +213,15 @@ export async function upsertEvent(
       .eq('id', existing.id)
       .throwOnError();
     eventId = existing.id as string;
+    // Attendee changes alone don't re-embed; the event's own text does.
+    const changed =
+      existing.title !== (event.title ?? null) ||
+      existing.description !== (event.description ?? null) ||
+      existing.location !== (event.location ?? null) ||
+      !sameInstant(existing.starts_at, event.startsAt) ||
+      !sameInstant(existing.ends_at, event.endsAt) ||
+      existing.all_day !== (event.allDay ?? false);
+    if (changed) await dropChunks('event_id', eventId);
   } else {
     const { data } = await supabase
       .from('events')
@@ -243,4 +259,16 @@ export async function upsertEvent(
   }
 
   return eventId;
+}
+
+// A source whose text changed loses its chunks, which puts it back in the
+// embedding queue (sources_missing_chunks, migration 0029).
+async function dropChunks(column: 'message_id' | 'event_id', id: string): Promise<void> {
+  await createServiceClient().from('content_chunks').delete().eq(column, id).throwOnError();
+}
+
+// Postgres returns timestamps in its own format, so compare instants.
+function sameInstant(stored: string | null, incoming: string | undefined): boolean {
+  if (!stored || !incoming) return !stored && !incoming;
+  return new Date(stored).getTime() === new Date(incoming).getTime();
 }
