@@ -117,6 +117,14 @@ insert into slack_installations (team_id, encrypted_bot_token, key_version, inst
 insert into terms_acceptances (user_id, terms_version, age_confirmed) values
   ('b1000000-0000-0000-0000-000000000001', 'test', true);
 
+insert into ai_threads (id, workspace_id, user_id, title) values
+  ('b9000000-0000-0000-0000-000000000001', 'b3000000-0000-0000-0000-000000000001',
+   'b1000000-0000-0000-0000-000000000001', 'B board prep');
+
+insert into ai_thread_messages (thread_id, workspace_id, user_id, role, content) values
+  ('b9000000-0000-0000-0000-000000000001', 'b3000000-0000-0000-0000-000000000001',
+   'b1000000-0000-0000-0000-000000000001', 'user', 'B secret question');
+
 -- ---------------------------------------------------------------------------
 -- Helpers. Both run as the caller (security invoker), so under
 -- `set local role authenticated` they see exactly what that user's RLS
