@@ -1,3 +1,4 @@
+import type { Embedder } from '@/src/server/rag/embedder';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Every tool runs under the asker's own Supabase session, never the service
@@ -8,6 +9,8 @@ export interface ToolContext {
   userId: string;
   workspaceId: string;
   now?: Date;
+  // Turns a search query into a vector; defaults to the OpenAI embedder.
+  embedder?: Embedder;
 }
 
 // A tappable citation the answer UI links back to.

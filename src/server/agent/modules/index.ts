@@ -11,8 +11,9 @@ export const AGENT_MODULES: AgentModule[] = [
     defaultPriority: 'interactive',
     needs: { sources: ['email', 'calendar', 'slack'] },
     permissions: {},
-    tools: ['searchMessages', 'searchEvents', 'slackSearch'],
-    instructions: 'Answer the question directly in one to three sentences.',
+    tools: ['semanticSearch', 'searchMessages', 'searchEvents', 'slackSearch'],
+    instructions:
+      'Use semanticSearch to find things by topic or meaning; use searchMessages or searchEvents for exact words, a sender or a date range. Answer the question directly in one to three sentences.',
   },
   {
     name: 'briefing',
@@ -23,9 +24,9 @@ export const AGENT_MODULES: AgentModule[] = [
     defaultPriority: 'interactive',
     needs: { sources: ['email', 'calendar', 'slack'], crossSource: true },
     permissions: {},
-    tools: ['searchMessages', 'searchEvents', 'slackSearch'],
+    tools: ['semanticSearch', 'searchMessages', 'searchEvents', 'slackSearch'],
     instructions:
-      'Search each relevant source, then give a short prioritized summary as bullet points.',
+      'Use semanticSearch for a topic across email, Slack and calendar, and searchMessages, searchEvents or slackSearch for exact words or a time window. Then give a short prioritized summary as bullet points.',
   },
   {
     name: 'draft',

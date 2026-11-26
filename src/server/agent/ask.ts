@@ -30,6 +30,7 @@ export type AskEvent = { type: 'status'; text: string } | { type: 'delta'; text:
 type OnEvent = (event: AskEvent) => void;
 
 const TOOL_STATUS: Record<string, string> = {
+  semanticSearch: 'Searching your mail, Slack and calendar…',
   searchMessages: 'Searching email…',
   searchEvents: 'Checking your calendar…',
   slackSearch: 'Searching Slack…',

@@ -4,6 +4,7 @@ import { draftEmail } from '@/src/server/agent/tools/draftEmail';
 import { proposeMeetingTimes } from '@/src/server/agent/tools/proposeMeetingTimes';
 import { searchEvents } from '@/src/server/agent/tools/searchEvents';
 import { searchMessages } from '@/src/server/agent/tools/searchMessages';
+import { semanticSearch } from '@/src/server/agent/tools/semanticSearch';
 import { slackSearch } from '@/src/server/agent/tools/slackSearch';
 import {
   ToolInputError,
@@ -16,6 +17,7 @@ import type { AiToolDefinition } from '@/src/server/agent/providers/types';
 export type { Source, ToolContext, ToolResult } from '@/src/server/agent/tools/types';
 
 const TOOLS = {
+  semanticSearch,
   searchMessages,
   searchEvents,
   slackSearch,
