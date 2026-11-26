@@ -8,6 +8,34 @@ describe('model tiers', () => {
     expect(modelForTier('deep')).toBe('gpt-5.6-sol');
   });
 
+  it('maps each tier to a current Claude model for the Anthropic provider', () => {
+    expect(modelForTier('fast', 'anthropic')).toBe('claude-haiku-5-5');
+    expect(modelForTier('standard', 'anthropic')).toBe('claude-sonnet-5-5');
+    expect(modelForTier('deep', 'anthropic')).toBe('claude-opus-5-5');
+  });
+
+  it('prices the Claude models, including their refusal-fallback models', () => {
+    // Sonnet 5.5: $2 / $10. Opus 5.5: $4 / $20. Opus 4.8: $5 / $25. Sonnet 5: $2 / $10.
+    expect(
+      costUsd('claude-sonnet-5-5', { inputTokens: 200_000, outputTokens: 60_000 }),
+    ).toBeCloseTo(1);
+    expect(costUsd('claude-opus-5-5', { inputTokens: 250_000, outputTokens: 100_000 })).toBeCloseTo(
+      3,
+    );
+    expect(costUsd('claude-opus-4-8', { inputTokens: 200_000, outputTokens: 0 })).toBeCloseTo(1);
+    expect(costUsd('claude-sonnet-5', { inputTokens: 500_000, outputTokens: 0 })).toBeCloseTo(1);
+  });
+
+  it('applies Haiku 5.5 long-prompt pricing above 100k input tokens', () => {
+    // $0.10 / $0.50 up to 100k input tokens; $0.50 / $2.50 for the whole request beyond.
+    expect(
+      costUsd('claude-haiku-5-5', { inputTokens: 100_000, outputTokens: 1_000_000 }),
+    ).toBeCloseTo(0.01 + 0.5);
+    expect(
+      costUsd('claude-haiku-5-5', { inputTokens: 200_000, outputTokens: 1_000_000 }),
+    ).toBeCloseTo(0.1 + 2.5);
+  });
+
   it('steps one tier up or down, clamped at the ends', () => {
     expect(tierUp('fast')).toBe('standard');
     expect(tierUp('standard')).toBe('deep');

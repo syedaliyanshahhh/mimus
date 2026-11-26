@@ -45,7 +45,7 @@ describe('openai provider', () => {
         {
           role: 'assistant',
           content: [
-            { type: 'opaque', item: reasoning },
+            { type: 'opaque', provider: 'openai', item: reasoning },
             { type: 'text', text: 'Let me look.' },
             { type: 'tool_use', id: 'call_1', name: 'searchMessages', input: { query: 'x' } },
           ],
@@ -144,7 +144,7 @@ describe('openai provider', () => {
       modelId: 'gpt-6-luna',
       stopReason: 'tool_use',
       content: [
-        { type: 'opaque', item: reasoning },
+        { type: 'opaque', provider: 'openai', item: reasoning },
         { type: 'text', text: 'Let me look.' },
         { type: 'tool_use', id: 'call_9', name: 'searchEvents', input: { from: '2026-10-01' } },
       ],
@@ -313,5 +313,27 @@ describe('openai provider', () => {
     vi.stubEnv('OPENAI_API_KEY', '');
     expect(() => createOpenAiProvider()).toThrow(/OPENAI_API_KEY/);
     vi.unstubAllEnvs();
+  });
+
+  it("never replays another provider's private items", async () => {
+    const { create, client } = fakeClient(apiResponse());
+    await createOpenAiProvider({ client }).complete({
+      tier: 'fast',
+      maxTokens: 64,
+      messages: [
+        { role: 'user', content: 'hi' },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'opaque', provider: 'anthropic', item: { type: 'thinking', thinking: '' } },
+            { type: 'text', text: 'Hello.' },
+          ],
+        },
+        { role: 'user', content: 'again' },
+      ],
+    });
+    const input = (create.mock.calls[0] as unknown as [{ input: unknown[] }])[0].input;
+    expect(JSON.stringify(input)).not.toContain('thinking');
+    expect(input).toHaveLength(3);
   });
 });
