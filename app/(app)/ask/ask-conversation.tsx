@@ -21,12 +21,16 @@ type Pending =
 // One /ask conversation. The server has already saved each turn by the
 // time its answer is done; a new thread's id arrives first, and the URL
 // switches to it without a navigation so the answer keeps streaming.
+// `initialQuestion` (Sky's compact chat, via /ask?q=) is asked once on
+// arrival.
 export function AskConversation({
   threadId: initialThreadId,
   initialMessages,
+  initialQuestion,
 }: {
   threadId?: string;
   initialMessages: Message[];
+  initialQuestion?: string;
 }) {
   const router = useRouter();
   const [threadId, setThreadId] = useState(initialThreadId);
@@ -34,13 +38,24 @@ export function AskConversation({
   const [pending, setPending] = useState<Pending>({ phase: 'idle' });
   const [question, setQuestion] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const askedInitial = useRef(false);
 
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ block: 'end' });
   }, [messages.length, pending]);
 
-  async function ask() {
-    const asked = question.trim();
+  useEffect(() => {
+    if (!initialQuestion || askedInitial.current) return;
+    askedInitial.current = true;
+    // Drop ?q= so a reload doesn't ask it again.
+    window.history.replaceState(null, '', '/ask');
+    void ask(initialQuestion);
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function ask(text: string = question) {
+    const asked = text.trim();
     if (!asked || pending.phase === 'asking') return;
     setQuestion('');
     setMessages((current) => [

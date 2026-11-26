@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { Suspense } from 'react';
 import { EmptyStateCard } from '../empty-state-card';
+import { AiSummaryCard, AiSummaryCardSkeleton } from './ai-summary-card';
 import { DepartmentRow } from './department-row';
 import { KpiTile } from './kpi-tile';
 import { NeedsYouCard } from './needs-you-card';
@@ -35,6 +36,11 @@ async function SkyContent() {
   }).format(new Date());
 
   const demo = await showsDemoData(context.workspaceId);
+  const summaryCard = (
+    <Suspense fallback={<AiSummaryCardSkeleton />}>
+      <AiSummaryCard context={context} />
+    </Suspense>
+  );
   const todayCard = (
     <Suspense fallback={<TodayCardSkeleton />}>
       <TodayCard context={context} demo={demo} />
@@ -48,6 +54,7 @@ async function SkyContent() {
           <h1 className="text-3xl font-semibold text-ink">Good morning, {firstName}.</h1>
           <p className="mt-1 text-sm text-ink-muted">Sky view · {today}</p>
         </div>
+        {summaryCard}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
           <EmptyStateCard
             title="Connect your email to see what needs you"
@@ -70,6 +77,8 @@ async function SkyContent() {
         </div>
         <p className="shrink-0 text-xs text-ink-faint">Sample data</p>
       </div>
+
+      {summaryCard}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {SKY_KPI_TILES.map((tile) => (

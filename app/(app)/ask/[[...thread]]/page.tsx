@@ -12,20 +12,36 @@ import { AskConversation } from '../ask-conversation';
 // thread id is simply not found.
 
 type Params = Promise<{ thread?: string[] }>;
+type SearchParams = Promise<{ q?: string | string[] }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default function AskPage({ params }: { params: Params }) {
+export default function AskPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   return (
     <Suspense fallback={<p className="text-ink-muted">Loading…</p>}>
-      <AskContent paramsPromise={params} />
+      <AskContent paramsPromise={params} searchParamsPromise={searchParams} />
     </Suspense>
   );
 }
 
-async function AskContent({ paramsPromise }: { paramsPromise: Params }) {
+async function AskContent({
+  paramsPromise,
+  searchParamsPromise,
+}: {
+  paramsPromise: Params;
+  searchParamsPromise: SearchParams;
+}) {
   await connection();
   const { thread: segments = [] } = await paramsPromise;
+  // A question handed off from Sky starts a new thread.
+  const { q } = await searchParamsPromise;
+  const handedOff = typeof q === 'string' ? q.trim().slice(0, 2000) : '';
   const threadId = segments[0];
   if (segments.length > 1 || (threadId !== undefined && !UUID.test(threadId))) notFound();
 
@@ -73,6 +89,7 @@ async function AskContent({ paramsPromise }: { paramsPromise: Params }) {
         key={thread?.id ?? 'new'}
         threadId={thread?.id}
         initialMessages={thread?.messages ?? []}
+        initialQuestion={!threadId && handedOff ? handedOff : undefined}
       />
     </div>
   );
