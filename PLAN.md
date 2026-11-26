@@ -209,6 +209,22 @@ Known open issues:
 - Users who signed up through an invite before the fix (which stopped auto-provisioning a workspace when signing in to accept a pending invite) may still belong to two workspaces, and get an arbitrary one of them until a workspace switcher exists. Left as is by decision.
 - New Gmail/Outlook mail doesn't sync after the initial backfill yet. The first `watch()`/Graph subscription is registered by the renewal cron (it picks up accounts with no watch), and that cron isn't scheduled until there's a deployed URL (and, for Gmail, a Pub/Sub topic).
 
+### Days 2–3 of the 7-day plan (Nov 26, 2026)
+
+Done at the repo owner's request, ahead of M6:
+
+| PR  | What it added                                                                                                                                                                                              |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #4  | Workspace switcher for users in several companies (`MULTI_USER_PLAN.md` A4)                                                                                                                                |
+| #5  | Seat limits on invite and accept, seat usage on Members (A5)                                                                                                                                               |
+| #6  | `demo_data` feature switch: sample data only for demo workspaces, empty states for everyone else (A6)                                                                                                      |
+| #7  | Sky's schedule card shows today's real meetings                                                                                                                                                            |
+| #8  | Migration 0029: pgvector `content_chunks` (RLS = `can_see_connected_account`), `match_chunks()`, embedding after each import and by the daily `embed-content` cron                                         |
+| #9  | `semanticSearch` agent tool (meaning + keywords, fused), in the `lookup` and `briefing` modules; adversarial test proves the database withholds another Member's chunks                                    |
+| #10 | Anthropic provider (Haiku / Sonnet / Opus 5.5) as the fallback when OpenAI has an outage, `AI_DISABLED_PROVIDERS`, priced Claude models; tested against a mocked API until `ANTHROPIC_API_KEY` is provided |
+
+Still open: live testing of the Claude fallback (needs `ANTHROPIC_API_KEY`), tuning semanticSearch's similarity floor (0.3) on real mail, and running migration 0029 plus one `embed-content` run on mimus-dev and production.
+
 ### Milestone 5 — Scheduling + approvals ✅ code-complete
 
 **Status:** merged (2026-10-14) as five PRs:

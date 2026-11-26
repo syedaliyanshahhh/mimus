@@ -1,8 +1,10 @@
-// The provider-neutral shape the agent layer talks to. OpenAI is the only
-// implementation today (providers/openai.ts); a second provider means a
-// second file implementing AiProvider, nothing upstream changes.
+// The provider-neutral shape the agent layer talks to. OpenAI
+// (providers/openai.ts) is first and Anthropic (providers/anthropic.ts) is
+// the fallback (providers/fallback.ts); nothing upstream knows which ran.
 
 export type ModelTier = 'fast' | 'standard' | 'deep';
+
+export type ProviderName = 'openai' | 'anthropic';
 
 export interface AiToolDefinition {
   name: string;
@@ -10,12 +12,13 @@ export interface AiToolDefinition {
   inputSchema: Record<string, unknown>;
 }
 
-// `opaque` carries a provider-private item (e.g. an OpenAI reasoning item)
-// that must be sent back unchanged on the next turn; nothing else reads it.
+// `opaque` carries a provider-private item (an OpenAI reasoning item, a
+// Claude thinking block) that must be sent back unchanged on the next turn.
+// Only the provider named on it replays it; the other one drops it.
 export type AiAssistantBlock =
   | { type: 'text'; text: string }
   | { type: 'tool_use'; id: string; name: string; input: unknown }
-  | { type: 'opaque'; item: unknown };
+  | { type: 'opaque'; provider: ProviderName; item: unknown };
 
 export type AiUserBlock =
   | { type: 'text'; text: string }

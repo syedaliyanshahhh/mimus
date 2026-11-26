@@ -26,16 +26,19 @@ export interface OpenAiResponsesClient {
 // along in the history as `opaque` blocks and are replayed in order.
 function toApiInput(message: AiMessage): OpenAI.Responses.ResponseInputItem[] {
   if (message.role === 'assistant') {
-    return message.content.map((block): OpenAI.Responses.ResponseInputItem => {
-      if (block.type === 'text') return { role: 'assistant', content: block.text };
+    return message.content.flatMap((block): OpenAI.Responses.ResponseInputItem[] => {
+      if (block.type === 'text') return [{ role: 'assistant', content: block.text }];
       if (block.type === 'tool_use')
-        return {
-          type: 'function_call',
-          call_id: block.id,
-          name: block.name,
-          arguments: JSON.stringify(block.input),
-        };
-      return block.item as OpenAI.Responses.ResponseInputItem;
+        return [
+          {
+            type: 'function_call',
+            call_id: block.id,
+            name: block.name,
+            arguments: JSON.stringify(block.input),
+          },
+        ];
+      // Another provider's private item (after a fallback) means nothing here.
+      return block.provider === 'openai' ? [block.item as OpenAI.Responses.ResponseInputItem] : [];
     });
   }
   if (typeof message.content === 'string') return [{ role: 'user', content: message.content }];
@@ -74,7 +77,7 @@ function fromApiOutput(output: OpenAI.Responses.ResponseOutputItem[]): AiAssista
         input: parseArguments(item.arguments),
       });
     } else if (item.type === 'reasoning') {
-      blocks.push({ type: 'opaque', item });
+      blocks.push({ type: 'opaque', provider: 'openai', item });
     }
   }
   return blocks;

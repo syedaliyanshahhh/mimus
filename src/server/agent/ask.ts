@@ -1,6 +1,6 @@
 import { logAgentRequest } from '@/src/server/agent/logAgentRequest';
 import { AGENT_MODULES, type AgentModule } from '@/src/server/agent/modules';
-import { createOpenAiProvider } from '@/src/server/agent/providers/openai';
+import { createAiProvider } from '@/src/server/agent/providers';
 import type {
   AiCompletion,
   AiMessage,
@@ -128,7 +128,7 @@ export async function askMimus({
   ctx,
   question,
   module: requestedModule,
-  provider = createOpenAiProvider(),
+  provider = createAiProvider(),
   now = new Date(),
   onEvent,
 }: {
