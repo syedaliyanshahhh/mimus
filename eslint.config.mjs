@@ -37,6 +37,8 @@ const eslintConfig = defineConfig([
     'playwright-report/**',
     'test-results/**',
     'supabase/.branches/**',
+    'desktop/src-tauri/target/**',
+    'desktop/src-tauri/gen/**',
     'supabase/.temp/**',
     // Deno runtime, not part of the Next.js app's lint/type scope.
     'supabase/functions/**',

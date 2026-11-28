@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/src/db/client';
+import { isDesktopUserAgent } from '@/src/lib/desktop';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
@@ -22,10 +23,16 @@ export function SignInForm() {
       document.cookie = `mimus-post-auth-redirect=${encodeURIComponent(next)}; max-age=600; path=/`;
     }
 
+    // In the desktop app the link opens in the system browser, which can't
+    // finish a PKCE sign-in started here -- /auth/desktop hands the code
+    // back to the app instead (see app/auth/desktop/route.ts).
+    const callbackPath = isDesktopUserAgent(navigator.userAgent)
+      ? '/auth/desktop'
+      : '/auth/callback';
     const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${window.location.origin}${callbackPath}` },
     });
 
     if (signInError) {
