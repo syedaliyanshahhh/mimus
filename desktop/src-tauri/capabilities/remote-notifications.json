@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/remote-schema.json",
+  "identifier": "remote-notifications",
+  "description": "The Mimus web app may send native notifications (meeting reminders) and nothing else. localhost is for dev builds against `next dev`.",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["https://getmimus.io/*", "https://dev.getmimus.io/*", "http://localhost:3000/*"]
+  },
+  "permissions": ["notification:default"]
+}

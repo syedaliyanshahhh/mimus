@@ -6,6 +6,7 @@ import { getInitials } from '@/src/lib/get-display-name';
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { Suspense } from 'react';
+import { DesktopReminders } from './desktop-reminders';
 import { ReadOnlyBanner } from './read-only-banner';
 import { TopNav } from './top-nav';
 
@@ -28,6 +29,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </Suspense>
         <Suspense fallback={null}>
           <ReadOnlyBannerServer />
+        </Suspense>
+        <Suspense fallback={null}>
+          <DesktopReminders />
         </Suspense>
         {children}
       </main>
